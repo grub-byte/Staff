@@ -14,6 +14,8 @@ builder.Services.AddDbContext<EmployeeDBContext>();
 builder.Services.AddScoped<IRepository<Employee>, EmployeeRepository>();
 
 var app = builder.Build();
+AppContext.SetSwitch(
+    "System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
 // Configure the HTTP request pipeline.
 app.MapGrpcService<WorkerIntegrationService>();

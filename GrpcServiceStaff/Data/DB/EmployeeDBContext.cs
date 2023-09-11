@@ -5,17 +5,19 @@ namespace GrpcServiceStaff.Data.DB
 {
     public class EmployeeDBContext : DbContext
     {
+        private readonly IConfiguration configuration;
         public DbSet<Employee> Employees { get; set; }
 
-        public EmployeeDBContext(DbContextOptions<EmployeeDBContext> options)
+        public EmployeeDBContext(DbContextOptions<EmployeeDBContext> options, IConfiguration configuration)
             : base(options)
         {
+            this.configuration = configuration;
             Database.EnsureCreated();
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.UseNpgsql("Host=localhost;Port=5433;Database=usersdb;Username=postgres;Password=здесь_указывается_пароль_от_postgres");
+            optionsBuilder.UseNpgsql(configuration.GetConnectionString("WebApiDatabase"));
         }
     }
 }
