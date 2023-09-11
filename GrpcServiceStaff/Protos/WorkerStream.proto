@@ -4,6 +4,7 @@ option csharp_namespace = "GrpcServiceStaff";
 
 service WorkerIntegration {
 	rpc GetWorkerStream (EmptyMessage) returns (stream WorkerAction);
+	rpc DoWorkerAction (WorkerAction) returns (WorkerMessage);
 }
 
 message EmptyMessage

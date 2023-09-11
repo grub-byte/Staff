@@ -1,3 +1,6 @@
+using Common.Models;
+using GrpcServiceStaff.Data.DB;
+using GrpcServiceStaff.Data.Repo;
 using GrpcServiceStaff.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -7,6 +10,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddGrpc();
+builder.Services.AddDbContext<EmployeeDBContext>();
+builder.Services.AddScoped<IRepository<Employee>, EmployeeRepository>();
 
 var app = builder.Build();
 
