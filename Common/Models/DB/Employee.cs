@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using Common.Enums;
 
-namespace Common.Models
+namespace Common.Models.DB
 {
     public class Employee
     {

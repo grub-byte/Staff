@@ -12,6 +12,11 @@
     mc:Ignorable="d"
     DataContext="{x:Type viewmodels:MainWindowViewModel}"
     Title="MainWindow">
+    <Window.Resources>
+        <Style TargetType="Button">
+            <Setter Property="Margin" Value="2,5" />
+        </Style>
+    </Window.Resources>
     <core:Interaction.Triggers>
         <core:EventTrigger EventName="Loaded" SourceObject="{Binding ElementName=MW}">
             <core:InvokeCommandAction Command="{Binding LoadCommand}" />
@@ -19,14 +24,27 @@
     </core:Interaction.Triggers>
 
     <DockPanel LastChildFill="True">
+        <StatusBar DockPanel.Dock="Bottom" VerticalAlignment="Bottom" Background="Beige">
+            <StatusBarItem>
+                <TextBlock Text="{Binding StatusText}" />
+            </StatusBarItem>
+        </StatusBar>
+
         <StackPanel DockPanel.Dock="Left">
             <Button Command="{Binding CreateCommand}" Content="Создать" />
             <Button Command="{Binding EditCommand}" Content="Редактировать" />
             <Button Command="{Binding DeleteCommand}" Content="Удалить" />
+            <Button Command="{Binding LoadCommand}" Content="Обновить данные" />
         </StackPanel>
+
         <DataGrid
             AutoGenerateColumns="True"
+            CanUserAddRows="False"
+            CanUserDeleteRows="False"
+            IsReadOnly="True"
             ItemsSource="{Binding Employees}"
-            SelectedItem="{Binding SelectedEmployee}" />
+            SelectedItem="{Binding SelectedEmployee, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+            SelectionMode="Single" />
+
     </DockPanel>
 </Window>

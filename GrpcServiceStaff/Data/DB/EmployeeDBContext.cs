@@ -1,4 +1,4 @@
-﻿using Common.Models;
+﻿using Common.Models.DB;
 using Microsoft.EntityFrameworkCore;
 
 namespace GrpcServiceStaff.Data.DB

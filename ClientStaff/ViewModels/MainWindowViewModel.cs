@@ -2,10 +2,9 @@
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Windows.Input;
 using ClientStaff.Service;
 using ClientStaff.Views;
-using Common.Models;
+using Common.Models.Client;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using NLog;
@@ -14,14 +13,16 @@ namespace ClientStaff.ViewModels
 {
     internal partial class MainWindowViewModel : ObservableObject
     {
+        private const string STR_READY = "Готово";
         #region Private Fields
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
-        private readonly IDataService<Employee> _dataService;
-        private Employee? selectedEmployee;
+        private readonly IDataService<ClientEmployee> _dataService;
+        private ClientEmployee? selectedEmployee;
+        private string statusText;
         #endregion
 
         #region Ctor
-        public MainWindowViewModel(IDataService<Employee> dataService)
+        public MainWindowViewModel(IDataService<ClientEmployee> dataService)
         {
             _dataService = dataService;
             CreateCommand = new AsyncRelayCommand(CreateCommandExecute);
@@ -32,13 +33,27 @@ namespace ClientStaff.ViewModels
         #endregion
 
         #region Public Properties
-        public ObservableCollection<Employee> Employees { get; } = new ObservableCollection<Employee>();
+        public ObservableCollection<ClientEmployee> Employees { get; } = new ObservableCollection<ClientEmployee>();
 
-        public Employee? SelectedEmployee { get => selectedEmployee; set => SetProperty(ref selectedEmployee, value); }
+        public ClientEmployee? SelectedEmployee
+        {
+            get => selectedEmployee;
+            set => SetProperty(
+                selectedEmployee,
+                value,
+                callback: (emp) =>
+                {
+                    selectedEmployee = emp;
+                    EditCommand.NotifyCanExecuteChanged();
+                    DeleteCommand.NotifyCanExecuteChanged();
+                });
+        }
+
+        public string StatusText { get => statusText; set => SetProperty(ref statusText, value); }
         #endregion
 
         #region CreateCommand
-        public ICommand CreateCommand { get; }
+        public AsyncRelayCommand CreateCommand { get; }
 
         private async Task CreateCommandExecute()
         {
@@ -48,19 +63,26 @@ namespace ClientStaff.ViewModels
             {
                 try
                 {
+                    StatusText = "Создание";
                     var employee = GetEmployee(dlg);
-                    await _dataService.Create(employee);
-                    OnPropertyChanged(nameof(Employees));
+                    var createdEmployee = await _dataService.Create(employee);
+                    if (createdEmployee != null)
+                    {
+                        Employees.Add(createdEmployee);
+                    }
+                    StatusText = STR_READY;
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
+                    Logger.Error(ex);
+                    StatusText = SetErrorStatus(ex);
                 }
             }
         }
         #endregion
 
         #region EditCommand
-        public ICommand EditCommand { get; }
+        public AsyncRelayCommand EditCommand { get; }
 
         private async Task EditCommandExecute()
         {
@@ -69,11 +91,12 @@ namespace ClientStaff.ViewModels
             dlg.FirstName.Text = SelectedEmployee?.FirstName;
             dlg.LastName.Text = SelectedEmployee?.LastName;
             dlg.MiddleName.Text = SelectedEmployee?.MiddleName;
-            dlg.Birthday.Text = new DateTime(SelectedEmployee?.Birthday ?? 0).ToShortDateString();
+            dlg.Birthday.Text = SelectedEmployee?.Birthday?.ToShortDateString();
             if (dlg.ShowDialog() ?? false)
             {
                 try
                 {
+                    StatusText = "Редактирование";
                     var employee = GetEmployee(dlg);
                     var updatedEmployee = await _dataService.Update(employee);
                     var found = Employees.FirstOrDefault(x => x.Id == updatedEmployee?.Id);
@@ -82,9 +105,12 @@ namespace ClientStaff.ViewModels
                         int i = Employees.IndexOf(found);
                         Employees[i] = updatedEmployee ?? Employees[i];
                     }
+                    StatusText = STR_READY;
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
+                    Logger.Error(ex);
+                    StatusText = SetErrorStatus(ex);
                 }
             }
         }
@@ -93,7 +119,7 @@ namespace ClientStaff.ViewModels
         #endregion
 
         #region DeleteCommand
-        public ICommand DeleteCommand { get; }
+        public AsyncRelayCommand DeleteCommand { get; }
 
         private async Task DeleteCommandExecute()
         {
@@ -101,10 +127,18 @@ namespace ClientStaff.ViewModels
             {
                 try
                 {
-                    await _dataService.Delete(SelectedEmployee);
+                    StatusText = "Удаление";
+                    var employee = await _dataService.Delete(SelectedEmployee);
+                    if (employee != null)
+                    {
+                        Employees.Remove(SelectedEmployee);
+                    }
+                    StatusText = STR_READY;
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Logger.Error(ex);
+                    StatusText = SetErrorStatus(ex);
                 }
             }
         }
@@ -113,29 +147,36 @@ namespace ClientStaff.ViewModels
         #endregion
 
         #region LoadCommand
-        public ICommand LoadCommand { get; }
+        public AsyncRelayCommand LoadCommand { get; }
 
         private async Task LoadCommandExecute()
         {
-            try
+            for (var i = 0; i < 3; i++)
             {
-                await foreach (var employee in _dataService.Get())
+                try
                 {
-                    Employees.Add(employee);
+                    StatusText = "Загрузка";
+                    Employees.Clear();
+                    await foreach (var employee in _dataService.Get())
+                    {
+                        Employees.Add(employee);
+                    }
+                    StatusText = STR_READY;
+                    break;
                 }
-            }
-            catch (Exception ex)
-            {
-                Logger.Warn(ex);
+                catch (Exception ex)
+                {
+                    Logger.Error(ex);
+                    StatusText = SetErrorStatus(ex);
+                }
             }
         }
         #endregion
 
         #region Private Methods
-        private long GetDate(string timeString) { return DateTime.TryParse(timeString, out var date) ? date.Ticks : 0; }
-        private Employee GetEmployee(DialogView dlg)
+        private ClientEmployee GetEmployee(DialogView dlg)
         {
-            return new Employee()
+            return new ClientEmployee()
             {
                 FirstName = dlg.FirstName.Text,
                 LastName = dlg.LastName.Text,
@@ -143,10 +184,16 @@ namespace ClientStaff.ViewModels
                 Sex =
                     string.IsNullOrEmpty(dlg.Sex.SelectedItem?.ToString())
                         ? null
-                        : (Common.Enums.Sex)dlg.Sex.SelectedIndex,
+                        : (Common.Enums.Sex)(dlg.Sex.SelectedIndex + 1),
                 HaveChildren = dlg.HaveChildren.IsChecked,
-                Birthday = GetDate(dlg.Birthday.Text)
+                Birthday = DateTime.TryParse(dlg.Birthday.Text, out var date) ? date : null,
+                Id = SelectedEmployee?.Id ?? 0
             };
+        }
+
+        private string SetErrorStatus(Exception ex)
+        {
+            return $"Error: {ex?.Message}";
         }
         #endregion
     }

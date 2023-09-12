@@ -1,5 +1,5 @@
 ﻿using Common;
-using Common.Models;
+using Common.Models.DB;
 using Grpc.Core;
 using GrpcServiceStaff.Data.Repo;
 
@@ -10,7 +10,9 @@ namespace GrpcServiceStaff.Services
         private readonly ILogger<WorkerIntegrationService> _logger;
         private readonly IRepository<Employee> _employeeRepository;
 
-        public WorkerIntegrationService(ILogger<WorkerIntegrationService> logger, IRepository<Employee> employeeRepository)
+        public WorkerIntegrationService(
+            ILogger<WorkerIntegrationService> logger,
+            IRepository<Employee> employeeRepository)
         {
             _employeeRepository = employeeRepository;
             _logger = logger;
@@ -21,33 +23,48 @@ namespace GrpcServiceStaff.Services
             IServerStreamWriter<WorkerAction> responseStream,
             ServerCallContext context)
         {
-            var items = await _employeeRepository.Get();
-            foreach (var employee in items)
+            try
             {
-                await responseStream.WriteAsync(
-                    new WorkerAction() { ActionType = Action.Default, Worker = employee.ToWorkerMessage() });
+                var items = await _employeeRepository.Get();
+                foreach (var employee in items)
+                {
+                    await responseStream.WriteAsync(
+                        new WorkerAction() { ActionType = Action.Default, Worker = employee.ToWorkerMessage() });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"{ex?.Message}"); ;
             }
         }
 
-        public override async Task<WorkerMessage> DoWorkerAction(WorkerAction request, ServerCallContext context)
+        public override async Task<WorkerMessage?> DoWorkerAction(WorkerAction request, ServerCallContext context)
         {
-            Employee? employee = null;
-            if (request?.Worker != null)
+            try
             {
-                switch (request.ActionType)
+                Employee? employee = null;
+                if (request?.Worker != null)
                 {
-                    case Action.Create:
-                        employee = await _employeeRepository.Create(request.Worker.ToEmployee());
-                        break;
-                    case Action.Update:
-                        employee = await _employeeRepository.Update(request.Worker.ToEmployee());
-                        break;
-                    case Action.Delete:
-                        employee = await _employeeRepository.Delete(request.Worker.ToEmployee());
-                        break;
+                    switch (request.ActionType)
+                    {
+                        case Action.Create:
+                            employee = await _employeeRepository.Create(request.Worker.ToEmployee());
+                            break;
+                        case Action.Update:
+                            employee = await _employeeRepository.Update(request.Worker.ToEmployee());
+                            break;
+                        case Action.Delete:
+                            employee = await _employeeRepository.Delete(request.Worker.ToEmployee());
+                            break;
+                    }
                 }
+                return employee?.ToWorkerMessage();
             }
-            return employee?.ToWorkerMessage() ?? new WorkerMessage();
+            catch (Exception ex)
+            {
+                _logger.LogError($"{ex?.Message}");
+                return null;
+            }
         }
     }
 }

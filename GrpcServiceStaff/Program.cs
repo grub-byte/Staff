@@ -1,4 +1,4 @@
-using Common.Models;
+using Common.Models.DB;
 using GrpcServiceStaff.Data.DB;
 using GrpcServiceStaff.Data.Repo;
 using GrpcServiceStaff.Services;

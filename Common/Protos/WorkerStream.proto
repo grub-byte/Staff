@@ -19,12 +19,13 @@ message WorkerAction
 
 message WorkerMessage
 {
-	string LastName = 1;
-	string FirstName = 2;
-	string MiddleName = 3;
-	int64 Birthday = 4;
-	Sex Sex = 5;
-	bool HaveChildren = 6;
+	int32 Id = 1;
+	string LastName = 2;
+	string FirstName = 3;
+	string MiddleName = 4;
+	int64 Birthday = 5;
+	Sex Sex = 6;
+	bool HaveChildren = 7;
 }
 
 //Пол

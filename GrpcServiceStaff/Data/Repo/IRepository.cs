@@ -4,7 +4,7 @@
     {
         Task<IQueryable<T>> Get(); // получение всех объектов
         Task<T> Create(T item); // создание объекта
-        Task<T> Update(T item); // обновление объекта
-        Task<T> Delete(T item); // удаление объекта по id
+        Task<T?> Update(T item); // обновление объекта
+        Task<T?> Delete(T item); // удаление объекта по id
     }
 }

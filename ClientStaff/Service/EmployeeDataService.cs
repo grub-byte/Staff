@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Common;
-using Common.Models;
+using Common.Models.Client;
 using Grpc.Core;
 using Grpc.Net.Client;
 using GrpcServiceStaff;
@@ -11,7 +11,7 @@ using Action = GrpcServiceStaff.Action;
 
 namespace ClientStaff.Service
 {
-    internal class EmployeeDataService : IDataService<Employee>
+    internal class EmployeeDataService : IDataService<ClientEmployee>
     {
         #region Private Fields
         private readonly WorkerIntegration.WorkerIntegrationClient _client;
@@ -27,7 +27,7 @@ namespace ClientStaff.Service
         #endregion
 
         #region IDataService<Employee>
-        public async Task<Employee?> Create(Employee item)
+        public async Task<ClientEmployee?> Create(ClientEmployee item)
         {
             try
             {
@@ -40,7 +40,7 @@ namespace ClientStaff.Service
             }
         }
 
-        public async Task<Employee?> Delete(Employee item)
+        public async Task<ClientEmployee?> Delete(ClientEmployee item)
         {
             try
             {
@@ -53,18 +53,18 @@ namespace ClientStaff.Service
             }
         }
 
-        public async IAsyncEnumerable<Employee> Get()
+        public async IAsyncEnumerable<ClientEmployee> Get()
         {
             var serverData = _client.GetWorkerStream(new EmptyMessage());
             var responseStream = serverData.ResponseStream;
             await foreach (var workerAction in responseStream.ReadAllAsync())
             {
-                var employee = workerAction.Worker.ToEmployee();
+                var employee = workerAction.Worker.ToClientEmployee();
                 yield return employee;
             }
         }
 
-        public async Task<Employee?> Update(Employee item)
+        public async Task<ClientEmployee?> Update(ClientEmployee item)
         {
             try
             {
@@ -79,11 +79,11 @@ namespace ClientStaff.Service
         #endregion
 
         #region Private Methods
-        private async Task<Employee?> DoWorkerAction(Employee item, Action action)
+        private async Task<ClientEmployee?> DoWorkerAction(ClientEmployee item, Action action)
         {
             var employee = item.ToWorkerMessage();
             var wm = await _client.DoWorkerActionAsync(new WorkerAction() { ActionType = action, Worker = employee });
-            return wm?.ToEmployee();
+            return wm?.ToClientEmployee();
         }
         #endregion
     }
